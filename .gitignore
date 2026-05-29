@@ -22,7 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-public/data/geovisor-data.json
 public/data/dnp_tc1_tc2_s4_cs2_2026-02.csv
-public/data/geovisor-data.json
 public/data/dnp_tc1_tc2_s4_cs2_2026-02.csv
