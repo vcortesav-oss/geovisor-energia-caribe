@@ -77,6 +77,22 @@ p {
   padding: 22px;
 }
 
+.hero-banner {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.hero-banner__img {
+  display: block;
+  height: auto;
+  margin: 0 auto;
+  max-width: 1024px;
+  width: 100%;
+}
+
 .hero-header {
   align-items: center;
   background: var(--surface);
@@ -133,6 +149,18 @@ p {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.observatorio-badge {
+  background: transparent;
+  display: inline-flex;
+  padding: 0;
+}
+
+.observatorio-logo {
+  display: block;
+  height: auto;
+  width: min(190px, 42vw);
 }
 
 .entity-logo {
@@ -1225,6 +1253,70 @@ td {
 .quality-card p {
   font-size: 13px;
   padding: 0 14px;
+}
+
+.site-footer {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 16px 22px;
+}
+
+.site-footer__media {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.site-footer__media img {
+  background: transparent;
+  height: 56px;
+  object-fit: contain;
+  width: auto;
+}
+
+.site-footer__credits {
+  color: var(--muted);
+  flex: 1 1 240px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.site-footer__credits p {
+  margin: 0;
+}
+
+.site-footer__credits span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.site-footer__logo {
+  background: transparent;
+  flex-shrink: 0;
+  height: auto;
+  padding: 0;
+  width: min(170px, 44vw);
+}
+
+@media (max-width: 720px) {
+  .site-footer {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .site-footer__credits {
+    order: 3;
+  }
 }
 
 @media (max-width: 1180px) {

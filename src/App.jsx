@@ -28,6 +28,7 @@ import { formatNumber, formatPercent } from "./utils/colorScales";
 import { DIU_LABEL, FIU_LABEL, normalizeAnalyticLayer } from "./utils/labels";
 
 const superserviciosLogoUrl = "/superservicios-logo.png";
+const observatorioLogoUrl = "/observatorio-logo.png";
 const COLOMBIA_DIVIPOLA_URL = "/data/colombia-divipola.json";
 
 function QualityPanel({ issues, totalRows, validRows }) {
@@ -579,9 +580,6 @@ export default function App() {
    * Fallback CSV path stays available for endpoint experiments, but the default
    * view uses the optimized JSON generated from the SQL output columns.
    */
-  const totalRowsLabel = dataFiltersAreActive
-    ? displayRows.length
-    : optimized?.metrics?.validGeoRows || rows.length;
   const resetFilters = () => {
     setFilters({ ...INITIAL_FILTERS });
     setResetVersion((version) => version + 1);
@@ -604,7 +602,9 @@ export default function App() {
           </div>
         </div>
         <div className="hero-actions">
-          <div className="status-pill">{loading ? "Cargando dataset" : `${formatNumber(totalRowsLabel)} suscriptores/hogares`}</div>
+          <div className="observatorio-badge">
+            <img className="observatorio-logo" src={observatorioLogoUrl} alt="Observatorio Superservicios" />
+          </div>
         </div>
       </header>
 
@@ -689,6 +689,26 @@ export default function App() {
         <TerritoryInfoPanel rows={displayRows} optimized={optimized} useFilteredData={dataFiltersAreActive} />
         <DataTable rows={displayRows} />
       </div>
+
+      <footer className="site-footer">
+        <div className="site-footer__media" aria-hidden="true">
+          <img src="/guia-rostros.png" alt="" loading="lazy" />
+        </div>
+        <div className="site-footer__credits">
+          <p>
+            <span>Desarrollo:</span> Victor Hugo Cortes
+          </p>
+          <p>
+            <span>Revisó:</span> Luis Javier Mosquera y Diego Andres Mateus
+          </p>
+        </div>
+        <img
+          className="site-footer__logo"
+          src={observatorioLogoUrl}
+          alt="Observatorio Superservicios"
+          loading="lazy"
+        />
+      </footer>
     </main>
   );
 }
