@@ -5,7 +5,7 @@ const cards = [
   {
     key: "totalUsuarios",
     label: "Suscriptores/hogares registrados en la base",
-    unit: "registros filtrados",
+    unit: "suscriptores/hogares en la base",
     format: (value) => formatNumber(value),
   },
   {
@@ -51,30 +51,37 @@ const cards = [
   },
 ];
 
-export default function KpiCards({ kpis, filtered, fullDatasetCount }) {
+export default function KpiCards({ kpis, filtered, fullDatasetCount, visualizedCount }) {
+  // Valor principal del total: base filtrada dinámica (total general o por filtro).
+  // Si no hay conteo de base completa disponible, se usa el total calculado.
+  const baseTotal =
+    filtered && fullDatasetCount != null && fullDatasetCount > 0 ? fullDatasetCount : kpis?.totalUsuarios;
+
+  const cardValue = (card) => (card.key === "totalUsuarios" ? card.format(baseTotal) : card.format(kpis?.[card.key]));
+
   return (
     <section className="kpi-section">
       <div className="card-header kpi-section__header">
         <h2>Indicadores de continuidad del servicio</h2>
       </div>
-      {filtered ? (
-        <p className="kpi-context">
-          Indicadores calculados solo con los registros filtrados de la base del visor (
-          {formatNumber(kpis?.totalUsuarios)} registros). La base completa puede tener más registros con los mismos
-          filtros; no corresponde a población oficial DANE.
-        </p>
-      ) : null}
+      <p className="kpi-context">
+        Los indicadores se calculan con base en los registros disponibles según los filtros aplicados. El mapa solo
+        visualiza registros georreferenciados agrupados territorialmente; no corresponde a población oficial DANE.
+      </p>
       <div className="kpi-grid" aria-label="Indicadores principales">
         {cards.map((card) => (
           <article className="kpi-card" key={card.key}>
             <span>{card.label}</span>
-            <strong>{card.format(kpis?.[card.key])}</strong>
-            {card.key === "totalUsuarios" && filtered && fullDatasetCount != null && fullDatasetCount > 0 ? (
-              <small className="kpi-detail">Base completa: {formatNumber(fullDatasetCount)} suscriptores/hogares</small>
+            <strong>{cardValue(card)}</strong>
+            {card.key === "totalUsuarios" ? (
+              <small className="kpi-detail">
+                Georreferenciados/visualizados en el mapa: {formatNumber(visualizedCount)}
+              </small>
             ) : null}
             {card.key === "totalUsuarios" ? (
               <small className="kpi-detail kpi-detail--note">
-                Dato calculado sobre registros disponibles en la base filtrada, no sobre población total DANE.
+                Total dinámico de la base filtrada; los registros del mapa son los georreferenciados agrupados, no
+                población oficial DANE.
               </small>
             ) : null}
             {card.detailKey && card.detailFormat(kpis?.[card.detailKey]) ? (

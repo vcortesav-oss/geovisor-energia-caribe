@@ -1,6 +1,7 @@
 import { INITIAL_FILTERS, TIPO_SERVICIO_OPTIONS, ANALYTIC_LAYER_OPTIONS } from "../utils/dataCleaning";
 
 const visualModes = [
+  { value: "general", label: "Vista general" },
   { value: "zona", label: "Color por zona especial" },
   { value: "consumo", label: "Color por consumo" },
   { value: "mora", label: "Color por mora" },
@@ -25,7 +26,9 @@ function SelectField({ label, value, options, onChange }) {
 
 export default function FiltersPanel({ filters, options, municipioOptions, onChange, onReset }) {
   const setFilter = (key, value) => onChange({ ...filters, [key]: value });
-  const activeCount = Object.entries(filters).filter(([key, value]) => value !== INITIAL_FILTERS[key]).length;
+  const activeCount = Object.entries(filters).filter(
+    ([key, value]) => key !== "visualMode" && key !== "capaAnalitica" && value !== INITIAL_FILTERS[key],
+  ).length;
   const handleReset = (event) => {
     event.preventDefault();
     event.stopPropagation();

@@ -3,13 +3,12 @@ export const DIU_LABEL = "DIU (horas/suscriptor/año)";
 export const FIU_LABEL = "FIU (interrupciones/suscriptor/año)";
 
 export const CAPA_LABELS = {
-  todos: "Concentración de suscriptores/hogares",
+  todos: "Sin capa analítica",
+  concentracion: "Concentración de suscriptores/hogares",
   altoConsumo: "Alto consumo",
   altaMora: "Alta mora",
   altaDiu: "Alta DIU",
   altaFiu: "Alta FIU",
-  estratoVulnerable: "Estrato 1-2",
-  zonaEspecialFoes: "Zona especial FOES",
 };
 
 export const ANALYTIC_LAYER_OPTIONS = Object.entries(CAPA_LABELS).map(([value, label]) => ({

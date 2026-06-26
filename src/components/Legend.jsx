@@ -11,6 +11,7 @@ const numericLegend = [
 ];
 
 const modeTitles = {
+  general: "Vista general",
   zona: "Color por zona especial",
   consumo: "Color por nivel de consumo",
   mora: "Color por días de mora",
@@ -19,6 +20,7 @@ const modeTitles = {
 
 export default function Legend({ renderedCount, totalCount, layerLabel, visualMode }) {
   const showZones = visualMode === "zona";
+  const showGeneral = visualMode === "general";
   const analyticLayers = ANALYTIC_LAYER_OPTIONS.filter((layer) => layer.value !== "todos");
 
   return (
@@ -30,19 +32,26 @@ export default function Legend({ renderedCount, totalCount, layerLabel, visualMo
       <div className="legend-section">
         <h3>{modeTitles[visualMode]}</h3>
         <div className="legend-items">
-          {showZones
-            ? zoneSamples.map((zone) => (
+          {showGeneral ? (
+            <span className="legend-item">
+              <i style={{ background: PALETTE.cyanBlue }} />
+              Visualización neutra/general
+            </span>
+          ) : showZones ? (
+            zoneSamples.map((zone) => (
                 <span className="legend-item" key={zone}>
                   <i style={{ background: zone === "Sin zona especial" ? PALETTE.cyanBlue : colorForZone(zone) }} />
                   {zone}
                 </span>
               ))
-            : numericLegend.map(([label, color]) => (
+          ) : (
+            numericLegend.map(([label, color]) => (
                 <span className="legend-item" key={label}>
                   <i style={{ background: color }} />
                   {label}
                 </span>
-              ))}
+              ))
+          )}
         </div>
       </div>
 

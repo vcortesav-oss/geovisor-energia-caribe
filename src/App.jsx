@@ -11,12 +11,11 @@ import {
   DEFAULT_DATA_URL,
   DEFAULT_OPTIMIZED_DATA_URL,
   INITIAL_FILTERS,
+  anonymizeNiu,
   applyFilters,
   buildFilterOptionsFromOptimized,
-  buildRiskThresholds,
   calculateKpis,
   calculateKpisFromMetrics,
-  filterByAnalyticLayer,
   getActiveFilterEntries,
   getFullDatasetFilterCount,
   hasDataFilters,
@@ -30,6 +29,24 @@ import { DIU_LABEL, FIU_LABEL, normalizeAnalyticLayer } from "./utils/labels";
 const superserviciosLogoUrl = "/superservicios-logo.png";
 const observatorioLogoUrl = "/observatorio-logo.png";
 const COLOMBIA_DIVIPOLA_URL = "/data/colombia-divipola.json";
+
+/** Fecha de actualización en formato DD/MM/AAAA HH:mm:ss. */
+function formatUpdateStamp(iso) {
+  const sourceDate = iso ? new Date(iso) : null;
+  const date = sourceDate && !Number.isNaN(sourceDate.getTime()) ? sourceDate : new Date();
+  const today = new Date();
+  const displayDate =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+      ? date
+      : today;
+  if (Number.isNaN(date.getTime())) return "-";
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${pad(displayDate.getDate())}/${pad(displayDate.getMonth() + 1)}/${displayDate.getFullYear()} ${pad(
+    displayDate.getHours(),
+  )}:${pad(displayDate.getMinutes())}:${pad(displayDate.getSeconds())}`;
+}
 
 function QualityPanel({ issues, totalRows, validRows }) {
   const items = [
@@ -111,6 +128,7 @@ function MapInsightsPanel({ rows, visualMode, filtered }) {
   const consumptionRows = consumptionBuckets(rows);
   const dominantZone = zoneRows[0]?.label || "Sin datos";
   const modeText = {
+    general: "Vista general sin coloración temática aplicada.",
     zona: "Los colores separan los suscriptores/hogares por tipo de zona especial.",
     consumo: "Los colores muestran bajo, medio, alto y muy alto consumo.",
     mora: "Los colores resaltan dónde se concentran hogares con más días de mora.",
@@ -314,7 +332,7 @@ function DataTable({ rows }) {
             {pageRows.length ? (
               pageRows.map((row) => (
                 <tr key={row.id}>
-                  <td>{row.niu}</td>
+                  <td>{anonymizeNiu(row.niu)}</td>
                   <td>{row.comercializador}</td>
                   <td>{row.departamento}</td>
                   <td>{row.municipio}</td>
@@ -510,18 +528,17 @@ export default function App() {
   };
 
   const filteredRows = useMemo(() => applyFilters(validGeoRows, filters), [validGeoRows, filters]);
-  const thresholds = useMemo(() => buildRiskThresholds(filteredRows), [filteredRows]);
-  const analyticRows = useMemo(
-    () => filterByAnalyticLayer(filteredRows, filters.capaAnalitica, thresholds),
-    [filteredRows, filters.capaAnalitica, thresholds],
-  );
   const activeFilterEntries = useMemo(() => getActiveFilterEntries(filters), [filters]);
   const fullDatasetFilterCount = useMemo(
     () => getFullDatasetFilterCount(optimized?.filterCounts, filters, optimized),
     [optimized, filters],
   );
   const dataFiltersAreActive = hasDataFilters(filters);
-  const displayRows = analyticRows;
+  const displayRows = filteredRows;
+  const filteredBaseTotal =
+    dataFiltersAreActive && fullDatasetFilterCount != null && fullDatasetFilterCount > 0
+      ? fullDatasetFilterCount
+      : optimized?.metrics?.validGeoRows || displayRows.length;
   const kpis = useMemo(() => {
     if (optimized?.metrics && !dataFiltersAreActive) return calculateKpisFromMetrics(optimized.metrics);
     return calculateKpis(displayRows);
@@ -608,6 +625,17 @@ export default function App() {
         </div>
       </header>
 
+      <div className="update-banner update-banner--top">
+        <div>
+          <span>Periodicidad de actualización:</span>
+          <strong>Semanal</strong>
+        </div>
+        <div>
+          <span>Fecha de actualización:</span>
+          <strong>{formatUpdateStamp(optimized?.generatedAt)}</strong>
+        </div>
+      </div>
+
       {error ? <div className="alert">{error}</div> : null}
       {optimized ? (
         <section className="source-banner">
@@ -616,8 +644,8 @@ export default function App() {
             <strong>{dataFiltersAreActive ? "Selección filtrada" : "Región Caribe colombiana"}</strong>
           </div>
           <article>
-            <strong>{formatNumber(dataFiltersAreActive ? displayRows.length : optimized.metrics.validGeoRows)}</strong>
-            <span>{dataFiltersAreActive ? "suscriptores/hogares en la selección" : "suscriptores/hogares con ubicación válida"}</span>
+            <strong>{formatNumber(filteredBaseTotal)}</strong>
+            <span>{dataFiltersAreActive ? "suscriptores/hogares en base filtrada" : "suscriptores/hogares en la base"}</span>
           </article>
           <article>
             <strong>{formatNumber(dataFiltersAreActive ? zonaEspecialCount : optimized.metrics.zonaEspecial)}</strong>
@@ -625,7 +653,7 @@ export default function App() {
           </article>
           <article>
             <strong>{formatNumber(displayRows.length)}</strong>
-            <span>suscriptores/hogares visibles en mapa y gráficos</span>
+            <span>registros georreferenciados visualizados</span>
           </article>
         </section>
       ) : null}
@@ -637,7 +665,12 @@ export default function App() {
         totalCount={dataFiltersAreActive ? filteredRows.length : optimized?.metrics?.validGeoRows || validGeoRows.length}
         fullDatasetCount={fullDatasetFilterCount}
       />
-      <KpiCards kpis={kpis} filtered={dataFiltersAreActive} fullDatasetCount={fullDatasetFilterCount} />
+      <KpiCards
+        kpis={kpis}
+        filtered={dataFiltersAreActive}
+        fullDatasetCount={fullDatasetFilterCount}
+        visualizedCount={displayRows.length}
+      />
 
       <div className="layout-grid">
         <FiltersPanel
@@ -655,6 +688,7 @@ export default function App() {
           visualMode={filters.visualMode}
           maxConsumption={maxConsumption}
           maxMora={maxMora}
+          baseFilteredTotal={filteredBaseTotal}
         />
       </div>
 

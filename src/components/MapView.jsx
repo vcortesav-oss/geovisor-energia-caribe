@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap, ZoomControl } from "react-leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CircleMarker,
+  MapContainer,
+  Popup,
+  TileLayer,
+  Tooltip,
+  useMap,
+  useMapEvents,
+  ZoomControl,
+} from "react-leaflet";
 import L from "leaflet";
 import ClusterPopup from "./ClusterPopup";
 import {
@@ -8,11 +17,25 @@ import {
   colorForZone,
   formatNumber,
   opacityForMora,
+  PALETTE,
 } from "../utils/colorScales";
-import { buildMapClusters, radiusForCluster } from "../utils/mapClusters";
+import { buildMapClusters, gridSizeForZoom, INDIVIDUAL_ZOOM, radiusForCluster } from "../utils/mapClusters";
 
 const CARIBE_CENTER = [10.45, -74.9];
 const CARIBE_ZOOM = 8;
+const MAX_RENDERED_CLUSTERS = 4000;
+
+function MapZoomTracker({ onZoomChange }) {
+  const map = useMapEvents({
+    zoomend: () => onZoomChange(map.getZoom()),
+  });
+
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+
+  return null;
+}
 
 function fitMapToRows(map, rows) {
   if (!rows.length) {
@@ -145,12 +168,24 @@ function MapCenterControl({ rows }) {
   return null;
 }
 
+function clusterCountLine(cluster) {
+  if (!cluster.hasSubscriberField) {
+    return <span>{formatNumber(cluster.registros)} registros georreferenciados agrupados</span>;
+  }
+
+  return (
+    <span>
+      {formatNumber(cluster.subscribers)} suscriptores/hogares · {formatNumber(cluster.registros)} registros agrupados
+    </span>
+  );
+}
+
 function clusterTooltipContent(cluster, visualMode) {
   if (visualMode === "consumo") {
     return (
       <>
         <strong>{formatNumber(cluster.consumoPromedio, 1)} kWh/mes prom.</strong>
-        <span>{formatNumber(cluster.count)} suscriptores/hogares</span>
+        {clusterCountLine(cluster)}
       </>
     );
   }
@@ -158,7 +193,7 @@ function clusterTooltipContent(cluster, visualMode) {
     return (
       <>
         <strong>{formatNumber(cluster.moraPromedio, 0)} días mora prom.</strong>
-        <span>{formatNumber(cluster.count)} suscriptores/hogares</span>
+        {clusterCountLine(cluster)}
       </>
     );
   }
@@ -170,21 +205,37 @@ function clusterTooltipContent(cluster, visualMode) {
             ? `${formatNumber(cluster.perdidaPromedio, 2)}% pérdida prom.`
             : "Sin reporte de pérdida"}
         </strong>
-        <span>{formatNumber(cluster.count)} suscriptores/hogares</span>
+        {clusterCountLine(cluster)}
       </>
     );
   }
   return (
     <>
-      <strong>{formatNumber(cluster.count)} suscriptores/hogares</strong>
-      <span>{cluster.municipio}</span>
+      <strong>{formatNumber(cluster.registros)} registros georreferenciados</strong>
+      <span>{cluster.municipio} · {formatNumber(cluster.registros)} registros agrupados</span>
     </>
   );
 }
 
-export default function MapView({ rows, analyticLayer, visualMode, maxConsumption, maxMora }) {
-  const clusters = useMemo(() => buildMapClusters(rows), [rows]);
-  const maxClusterCount = useMemo(() => Math.max(...clusters.map((cluster) => cluster.count), 1), [clusters]);
+export default function MapView({ rows, analyticLayer, visualMode, maxConsumption, maxMora, baseFilteredTotal }) {
+  const [zoom, setZoom] = useState(CARIBE_ZOOM);
+
+  // El clustering depende del zoom: vista general agrega más, zoom alto = puntos casi individuales.
+  const clusters = useMemo(() => buildMapClusters(rows, gridSizeForZoom(zoom)), [rows, zoom]);
+  const isDetail = zoom >= INDIVIDUAL_ZOOM;
+
+  // En vista general, evitar clústeres de 1 suscriptor/hogar (ruido visual).
+  const renderClusters = useMemo(() => {
+    const list = isDetail ? clusters : clusters.filter((cluster) => cluster.subscribers > 1);
+    const base = list.length ? list : clusters;
+    if (base.length <= MAX_RENDERED_CLUSTERS) return base;
+    return [...base].sort((a, b) => b.subscribers - a.subscribers).slice(0, MAX_RENDERED_CLUSTERS);
+  }, [clusters, isDetail]);
+
+  const maxClusterCount = useMemo(
+    () => Math.max(...renderClusters.map((cluster) => cluster.subscribers), 1),
+    [renderClusters],
+  );
   const isAnalytic = analyticLayer !== "todos";
   const analyticColor = analyticLayerColor(analyticLayer);
   const maxPerdida = Math.max(...rows.map((row) => row.perdidaEnergia || 0), 1);
@@ -194,7 +245,8 @@ export default function MapView({ rows, analyticLayer, visualMode, maxConsumptio
     if (visualMode === "consumo") return colorByNumericLevel(cluster.consumoPromedio, maxConsumption);
     if (visualMode === "mora") return colorByNumericLevel(cluster.moraPromedio, maxMora);
     if (visualMode === "perdida") return colorByNumericLevel(cluster.perdidaPromedio, maxPerdida);
-    return colorForZone(cluster.zonaBarrio);
+    if (visualMode === "zona") return colorForZone(cluster.zonaBarrio);
+    return PALETTE.cyanBlue;
   };
 
   return (
@@ -202,8 +254,8 @@ export default function MapView({ rows, analyticLayer, visualMode, maxConsumptio
       <div className="card-header">
         <h2>Mapa de concentración de suscriptores/hogares</h2>
         <span>
-          {clusters.length.toLocaleString("es-CO")} clústeres ·{" "}
-          {rows.length.toLocaleString("es-CO")} suscriptores/hogares
+          {formatNumber(rows.length)} registros georreferenciados · {formatNumber(baseFilteredTotal)}{" "}
+          suscriptores/hogares en base filtrada
         </span>
       </div>
 
@@ -221,14 +273,15 @@ export default function MapView({ rows, analyticLayer, visualMode, maxConsumptio
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <MapInvalidateSize />
-          <MapBounds rows={clusters} />
-          {clusters.map((cluster) => {
+          <MapZoomTracker onZoomChange={setZoom} />
+          <MapBounds rows={rows} />
+          {renderClusters.map((cluster) => {
             const fillColor = colorForCluster(cluster);
             return (
               <CircleMarker
                 key={cluster.id}
                 center={[cluster.lat, cluster.lng]}
-                radius={radiusForCluster(cluster.count, maxClusterCount)}
+                radius={isDetail ? 6 : radiusForCluster(cluster.subscribers, maxClusterCount)}
                 pathOptions={{
                   color: fillColor,
                   fillColor,
@@ -241,12 +294,12 @@ export default function MapView({ rows, analyticLayer, visualMode, maxConsumptio
                   {clusterTooltipContent(cluster, visualMode)}
                 </Tooltip>
                 <Popup className="map-zone-popup-wrapper" closeButton minWidth={300} maxWidth={360}>
-                  <ClusterPopup cluster={cluster} visualMode={visualMode} />
+                  <ClusterPopup cluster={cluster} visualMode={visualMode} isDetail={isDetail} />
                 </Popup>
               </CircleMarker>
             );
           })}
-          <MapCenterControl rows={clusters} />
+          <MapCenterControl rows={rows} />
         </MapContainer>
       </div>
     </section>

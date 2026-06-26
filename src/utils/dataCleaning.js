@@ -88,7 +88,7 @@ export const INITIAL_FILTERS = {
   fiuMax: "",
   perdidaMin: "",
   perdidaMax: "",
-  visualMode: "zona",
+  visualMode: "general",
   capaAnalitica: "todos",
 };
 
@@ -116,6 +116,7 @@ const RANGE_FILTER_LABELS = [
 const VULNERABLE_ESTRATOS = new Set(["1", "2"]);
 
 const VISUAL_MODE_LABELS = {
+  general: "Vista general",
   zona: "Color por zona especial",
   consumo: "Color por consumo",
   mora: "Color por mora",
@@ -128,7 +129,7 @@ export function hasActiveFilters(filters) {
 
 export function hasDataFilters(filters) {
   return Object.entries(filters).some(([key, value]) => {
-    if (key === "visualMode") return false;
+    if (key === "visualMode" || key === "capaAnalitica") return false;
     return value !== INITIAL_FILTERS[key];
   });
 }
@@ -197,15 +198,15 @@ export function getActiveFilterEntries(filters) {
     entries.push({ label: field.label, value });
   }
 
-  if (filters.capaAnalitica !== INITIAL_FILTERS.capaAnalitica) {
-    entries.push({ label: "Capa analítica", value: CAPA_LABELS[filters.capaAnalitica] || filters.capaAnalitica });
-  }
-
-  if (filters.visualMode !== INITIAL_FILTERS.visualMode) {
-    entries.push({ label: "Lectura del mapa", value: VISUAL_MODE_LABELS[filters.visualMode] || filters.visualMode });
-  }
-
   return entries;
+}
+
+/** Anonimiza el NIU mostrando solo los últimos 4 dígitos: ****1234. */
+export function anonymizeNiu(niu) {
+  const raw = String(niu ?? "").trim();
+  if (!raw) return "****";
+  const last4 = raw.slice(-4);
+  return `****${last4}`;
 }
 
 export function toNumber(value) {

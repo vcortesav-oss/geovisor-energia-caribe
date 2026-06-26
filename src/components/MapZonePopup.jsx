@@ -1,4 +1,5 @@
 import { DIU_LABEL, FIU_LABEL } from "../utils/labels";
+import { anonymizeNiu } from "../utils/dataCleaning";
 import { formatNumber, formatPercent } from "../utils/colorScales";
 
 const modeLabels = {
@@ -23,7 +24,7 @@ export function UserZonePopup({ row, visualMode }) {
       <h3 className="map-zone-popup__title">{row.sectorControl || row.municipio}</h3>
       <div className="map-zone-popup__body">
         <p className="map-zone-popup__meta">
-          NIU {row.niu} · {row.comercializador}
+          NIU {anonymizeNiu(row.niu)} · {row.comercializador}
         </p>
         <dl className="map-zone-popup__metrics">
           <Metric label="Departamento" value={row.departamento} />

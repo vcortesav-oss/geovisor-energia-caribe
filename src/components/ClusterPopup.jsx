@@ -10,8 +10,9 @@ function Metric({ label, value }) {
   );
 }
 
-export default function ClusterPopup({ cluster, visualMode }) {
+export default function ClusterPopup({ cluster, visualMode, isDetail }) {
   const modeLabels = {
+    general: "Vista general",
     zona: "Zona especial FOES",
     consumo: "Consumo",
     mora: "Mora",
@@ -21,14 +22,18 @@ export default function ClusterPopup({ cluster, visualMode }) {
   return (
     <div className="map-zone-popup">
       <h3 className="map-zone-popup__title">
-        {cluster.municipio} · {formatNumber(cluster.count)} suscriptores/hogares
+        {cluster.municipio} · {formatNumber(cluster.registros)} registros georreferenciados
       </h3>
       <div className="map-zone-popup__body">
         <p className="map-zone-popup__meta">
-          {cluster.departamento} · {formatNumber(cluster.lat, 4)}, {formatNumber(cluster.lng, 4)}
+          {isDetail ? "Punto de detalle" : "Agrupación territorial"} · {cluster.departamento} ·{" "}
+          {formatNumber(cluster.lat, 4)}, {formatNumber(cluster.lng, 4)}
         </p>
         <dl className="map-zone-popup__metrics">
-          <Metric label="Suscriptores/hogares" value={formatNumber(cluster.count)} />
+          {cluster.hasSubscriberField ? (
+            <Metric label="Suscriptores/hogares representados" value={formatNumber(cluster.subscribers)} />
+          ) : null}
+          <Metric label="Registros agrupados" value={formatNumber(cluster.registros)} />
           <Metric label="Estrato predominante" value={cluster.estratoPredominante} />
           <Metric label="Distribución por estrato" value={cluster.estratoDistribucion} />
           <Metric label="Departamento" value={cluster.departamento} />

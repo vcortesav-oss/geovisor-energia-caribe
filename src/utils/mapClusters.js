@@ -17,6 +17,12 @@ function formatDistribution(counts, total, limit = 4) {
     .join(" · ");
 }
 
+/** Suscriptores/hogares por registro: usa el campo solo si existe y es numérico. */
+function subscribersInRow(row) {
+  const value = row.suscriptores ?? row.hogares ?? row.cantidadUsuarios;
+  return Number.isFinite(value) && value > 0 ? { value, hasField: true } : { value: 1, hasField: false };
+}
+
 /** Agrupa suscriptores/hogares en celdas geográficas para visualizar concentración territorial. */
 export function buildMapClusters(rows, gridSize = DEFAULT_GRID_SIZE) {
   const buckets = new Map();
@@ -31,6 +37,8 @@ export function buildMapClusters(rows, gridSize = DEFAULT_GRID_SIZE) {
       cluster = {
         id: key,
         count: 0,
+        subscribers: 0,
+        hasSubscriberField: false,
         latSum: 0,
         lngSum: 0,
         consumoSum: 0,
@@ -52,7 +60,10 @@ export function buildMapClusters(rows, gridSize = DEFAULT_GRID_SIZE) {
       buckets.set(key, cluster);
     }
 
+    const subscriberData = subscribersInRow(row);
     cluster.count += 1;
+    cluster.subscribers += subscriberData.value;
+    cluster.hasSubscriberField ||= subscriberData.hasField;
     cluster.latSum += row.lat;
     cluster.lngSum += row.lng;
     cluster.consumoSum += row.consumo || 0;
@@ -97,6 +108,9 @@ export function buildMapClusters(rows, gridSize = DEFAULT_GRID_SIZE) {
     return {
       id: cluster.id,
       count,
+      registros: count,
+      subscribers: cluster.subscribers,
+      hasSubscriberField: cluster.hasSubscriberField,
       lat: cluster.latSum / count,
       lng: cluster.lngSum / count,
       consumoPromedio,
@@ -129,3 +143,21 @@ export function radiusForCluster(count, maxCount) {
   const scaled = Math.sqrt(count / max);
   return clamp(8 + scaled * 22, 8, 30);
 }
+
+/**
+ * Tamaño de grilla según el zoom: vista general = mayor agregación;
+ * zooms medios ≈ tamaño de barrio urbano; zoom alto = casi individual.
+ */
+export function gridSizeForZoom(zoom) {
+  if (zoom >= 15) return 0.0012;
+  if (zoom >= 14) return 0.003;
+  if (zoom >= 13) return 0.006;
+  if (zoom >= 12) return 0.012;
+  if (zoom >= 11) return 0.02;
+  if (zoom >= 10) return 0.04;
+  if (zoom >= 9) return 0.06;
+  return 0.09;
+}
+
+/** A partir de este zoom se considera vista de detalle (puntos casi individuales). */
+export const INDIVIDUAL_ZOOM = 15;
