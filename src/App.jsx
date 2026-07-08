@@ -610,7 +610,6 @@ export default function App() {
         <div className="hero-brand">
           <img className="entity-logo" src={superserviciosLogoUrl} alt="Superservicios" />
           <div>
-            <span className="eyebrow">Observatorio de Energía del Caribe</span>
             <h1>Visión territorial de suscriptores y hogares de energía</h1>
             <p>
               Seguimiento geográfico de suscriptores/hogares, consumo, mora, calidad del servicio, zonas especiales y
